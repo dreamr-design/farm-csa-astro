@@ -1,0 +1,59 @@
+---
+import Base from '../../layouts/Base.astro';
+import { site } from '../../site.config.mjs';
+import { url, postDate } from '../../lib/helpers.mjs';
+
+// Each post page beside this one, 6 to a list page: /blog/, then /blog/page/2/ and on
+export function getStaticPaths() {
+  const POSTS_PER_PAGE = 6;
+  const posts = Object.entries(import.meta.glob('./[a-z0-9]*.astro', { eager: true }))
+    .map(([file, module]) => ({ ...module.post, url: `/blog/${file.slice(2, -'.astro'.length)}/` }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const count = Math.max(1, Math.ceil(posts.length / POSTS_PER_PAGE));
+  const listUrl = (number) => (number === 1 ? '/blog/' : `/blog/page/${number}/`);
+  return Array.from({ length: count }, (item, index) => index + 1).map((number) => ({
+    params: { page: number > 1 ? `page/${number}` : undefined },
+    props: { posts: posts.slice((number - 1) * POSTS_PER_PAGE, number * POSTS_PER_PAGE), prev: number > 1 ? listUrl(number - 1) : null, next: number < count ? listUrl(number + 1) : null },
+  }));
+}
+
+const { posts, prev, next } = Astro.props;
+---
+<Base title={"Farm notes | Bramblecut Farm"} description={"The Wednesday note from Bramblecut Farm: what went into the ground, what came out of it, what to cook with this week's crate, and what the weather did to the peppers."}>
+<main id="main">
+    <section class="page-hero" aria-labelledby="page-title">
+      <div class="wrap">
+        <div>
+          <p class="kicker">Farm notes · Every Wednesday since 2013</p>
+          <h1 id="page-title">Notes from the rows, written after chores.</h1>
+          <p class="lede">The Wednesday note goes out the night before every pickup: what went into the ground, what came out of it, what to cook with the crate, and what the weather did to the peppers. These are the ones members asked us to keep.</p>
+        </div>
+        <p class="stamp stamp--round">Written<strong>Wed.</strong>packed Thurs.</p>
+      </div>
+    </section>
+
+    <section class="section band" aria-label="Latest farm notes">
+      <div class="wrap">
+        <div class="post-list">
+          {posts.map((post) => <Fragment>
+            <article class="post-card">
+              <div class="packet">
+                <div class="packet__top"><span>Farm note</span><span class="reg" aria-hidden="true"></span></div>
+                <div class="packet__art"><img src={url('/assets/' + post.cover)} alt="" width="200" height="200" loading="lazy"></div>
+                <h2 class="packet__name"><a href={url(post.url)}>{post.title}</a></h2>
+                <p class="post-card__excerpt">{post.description}</p>
+                <p class="post-card__by"><span>Bramblecut Farm</span><span class="post-date">{postDate(post.date)}</span></p>
+                <div class="packet__ink" aria-hidden="true"><i></i><i></i><i></i></div>
+              </div>
+            </article>
+          </Fragment>)}
+        </div>
+
+        <nav class="pagination" aria-label="Blog pages">
+          {(prev) && <Fragment><a class="pagination__step" href={url(prev)}>&larr; Newer notes</a></Fragment>}
+          {(next) && <Fragment><a class="pagination__step" href={url(next)}>Older notes &rarr;</a></Fragment>}
+        </nav>
+      </div>
+    </section>
+  </main>
+</Base>
